@@ -11,9 +11,6 @@
 
 // [ 应用入口文件 ]
 
-// 调试模式开关
-define("APP_DEBUG", true);
-
 // 定义根目录,可更改此目录
 define('PROJECT_ROOT', __DIR__ . '/../');
 
