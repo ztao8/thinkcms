@@ -86,6 +86,17 @@ function curl($url, $post = '',$headers)
 }
 
 /**
+ * 对明文密码，进行加密，返回加密后的密文密码
+ * @param string $password 明文密码
+ * @param string $verify 认证码
+ * @return string 密文密码
+ */
+function hashPassword($password, $verify = "")
+{
+    return md5($password . md5($verify));
+}
+
+/**
  * 产生一个指定长度的随机字符串,并返回给用户
  * @param type $len 产生字符串的长度
  * @return string 随机字符串

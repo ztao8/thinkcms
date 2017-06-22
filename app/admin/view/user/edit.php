@@ -10,7 +10,7 @@
                     <li>
                         <a href="{:url('index')}">用户列表</a>
                     </li>
-                    <li class="active">
+                    <li {empty name="Request.param.id"}class="active"{/empty}>
                         <a href="{:url('edit')}">添加用户</a>
                     </li>
                     <li class="pull-right">

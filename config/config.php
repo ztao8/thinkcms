@@ -125,7 +125,7 @@ return [
         // 模板路径
         'view_path'    => '',
         // 模板后缀
-        'view_suffix'  => 'html',
+        'view_suffix'  => 'php',
         // 模板文件名分隔符
         'view_depr'    => DS,
         // 模板引擎普通标签开始标记
@@ -141,8 +141,8 @@ return [
     // 视图输出字符串内容替换
     'view_replace_str'       => [],
     // 默认跳转页面对应的模板文件
-    'dispatch_success_tmpl'  => THINK_PATH . 'tpl' . DS . 'dispatch_jump.tpl',
-    'dispatch_error_tmpl'    => THINK_PATH . 'tpl' . DS . 'dispatch_jump.tpl',
+    'dispatch_success_tmpl'  => 'public:success',
+    'dispatch_error_tmpl'    => 'public:error',
 
     // +----------------------------------------------------------------------
     // | 异常及错误设置
@@ -232,8 +232,9 @@ return [
 
     //分页配置
     'paginate'               => [
-        'type'      => 'bootstrap',
+        'type'      => '\paginator\driver\Bootstrap',
         'var_page'  => 'page',
         'list_rows' => 15,
+        'query'     => \think\Request::instance()->get()
     ],
 ];

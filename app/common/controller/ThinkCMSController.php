@@ -14,7 +14,7 @@ class ThinkCMSController extends Controller
     //数据库主键
     const _PRIMARY_KEY_ = 'id';
     //分页页数
-    protected static $pageSize = 15;
+    protected $pageSize = 15;
     //数据模型
     protected $_model = NULL;
 
@@ -22,8 +22,6 @@ class ThinkCMSController extends Controller
     public function _initialize()
     {
         parent::_initialize();
-        //默认跳转时间
-        $this->assign("waitSecond", 3);
     }
 
     /**
@@ -36,16 +34,14 @@ class ThinkCMSController extends Controller
     public function index()
     {
         $model = $this->_initModel();
-        $where = $this->condition();
-        $count = $model->where($where)->count();
-        $page  = $this->page($count);
-        $list  = $model->where($where)->order($this->order())->limit($page->firstRow . ',' . $page->listRows)->select();
+        $list  = $model->where(function ($query) {
+            $this->condition($query);
+        })->order($this->order())->paginate($this->pageSize);
         $this->packageList($list);
-        $this->assign('page', $page->show());
+        $this->assign('page', $list->render());
         $this->assign('list', $list);
-        $this->assign('count', $count);
-        cookie('__forward__', I('server.REQUEST_URI'));
-        $this->display();
+        cookie('__forward__', $this->request->server('REQUEST_URI'));
+        return $this->fetch();
     }
 
     //列表数据处理
@@ -54,10 +50,8 @@ class ThinkCMSController extends Controller
     }
 
     //列表条件处理
-    protected function condition()
+    protected function condition(&$query)
     {
-        $where = array();
-        return $where;
     }
 
     //列表排序
@@ -76,21 +70,17 @@ class ThinkCMSController extends Controller
     {
         if ($this->request->isPost()) {
             $input = $this->request->post();
-            $validate = validate($this->_model);
-            if(!$validate->check($input)){
-                $this->error($validate->getError());
-            }
             $model = $this->_initModel();
             $this->checkEditInfo($input);
             if ($input['id']){
-                $result = $model->allowField(true)->save($input,[self::_PRIMARY_KEY_=>$input['id']]);
+                $result = $model->allowField(true)->validate($this->_model.'.edit')->save($input,[self::_PRIMARY_KEY_=>$input['id']]);
             }else{
-                $result = $model->allowField(true)->data($input)->save();
+                $result = $model->allowField(true)->validate($this->_model.'.add')->data($input)->save();
             }
-            if ($result !== false) {
-                $this->success('提交成功', cookie('__forward__'));
-            } else {
+            if ($result === false) {
                 $this->error($model->getError());
+            } else {
+                $this->success('提交成功', cookie('__forward__'));
             }
         } else {
             $this->getEditInfo();
@@ -103,10 +93,10 @@ class ThinkCMSController extends Controller
      */
     protected function getEditInfo()
     {
-        $key = $this->request->param(self::_PRIMARY_KEY_, 0);
-        if ($key) {
+        $id = $this->request->param(self::_PRIMARY_KEY_, 0);
+        if ($id) {
             $model = $this->_initModel();
-            $data = $model->where(self::_PRIMARY_KEY_,$key)->find();
+            $data = $model->where(self::_PRIMARY_KEY_,$id)->find();
             $this->assign('data', $data);
         }
     }
@@ -126,15 +116,13 @@ class ThinkCMSController extends Controller
      */
     public function delete()
     {
-        $key                        = I(self::_PRIMARY_KEY_, 0);
-        $model                      = $this->_initModel();
-        $where                      = array();
-        $where[self::_PRIMARY_KEY_] = $key;
-        $flag                       = $model->where($where)->delete();
-        if ($flag) {
-            $this->success('刪除成功', cookie('__forward__'));
-        } else {
+        $id = $this->request->param(self::_PRIMARY_KEY_, 0);
+        $model = $this->_initModel();
+        $result = $model->where(self::_PRIMARY_KEY_,$id)->delete();
+        if ($result === false) {
             $this->error($model->getError());
+        } else {
+            $this->success('刪除成功', cookie('__forward__'));
         }
     }
 
@@ -146,15 +134,13 @@ class ThinkCMSController extends Controller
      */
     public function del()
     {
-        $key                        = I(self::_PRIMARY_KEY_, 0);
-        $model                      = $this->_initModel();
-        $where                      = array();
-        $where[self::_PRIMARY_KEY_] = $key;
-        $flag                       = $model->where($where)->setField('status', 0);
-        if (false !== $flag) {
-            $this->success('刪除成功', cookie('__forward__'));
-        } else {
+        $id = $this->request->param(self::_PRIMARY_KEY_, 0);
+        $model = $this->_initModel();
+        $result = $model->where(self::_PRIMARY_KEY_,$id)->update(['status'=>0]);
+        if ($result === false) {
             $this->error($model->getError());
+        } else {
+            $this->success('刪除成功', cookie('__forward__'));
         }
     }
 
@@ -163,28 +149,27 @@ class ThinkCMSController extends Controller
      */
     public function status()
     {
-        $id     = I('id', 0);
-        $status = I('status', 0);
-        $model  = $this->_initModel();
-        $res    = $model->where(array('id' => $id))->save(array('status' => $status));
-        if ($res) {
-            $this->success('修改成功', cookie('__forward__'));
-        } else {
+        $id = $this->request->param(self::_PRIMARY_KEY_, 0);
+        $status = $this->request->param('status', 0);
+        $model = $this->_initModel();
+        $result = $model->where(self::_PRIMARY_KEY_,$id)->update(['status'=>$status]);
+        if ($result === false) {
             $this->error($model->getError());
+        } else {
+            $this->success('刪除成功', cookie('__forward__'));
         }
     }
 
     /**
      *  排序 排序字段为listorders数组 POST 排序字段为：listorder
      */
-    protected function _listorders()
+    protected function _list_orders()
     {
         $model = $this->_initModel();
         $pk    = $model->getPk();
-        $ids   = $_POST['listorders'];
-        foreach ($ids as $key => $r) {
-            $data['listorder'] = $r;
-            $model->where(array($pk => $key))->save($data);
+        $post   = $this->request->post();
+        foreach ($post['list_orders'] as $key => $r) {
+            $model->where($pk,$key)->update(['list_order'=>$r]);
         }
         return true;
     }
